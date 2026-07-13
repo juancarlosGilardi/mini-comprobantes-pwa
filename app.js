@@ -5,6 +5,7 @@ const API_BASE = (location.hostname === 'localhost' || location.hostname === '12
 
 const $ = (id) => document.getElementById(id);
 const TIPO_BADGE = { '01': 'b-01', '03': 'b-03', '07': 'b-07', '08': 'b-08' };
+const TIPO_CORTO = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de Crédito', '08': 'Nota de Débito' };
 
 let SQL = null;
 let db = null;
@@ -51,8 +52,9 @@ function filasDe(sql, params = []) {
   if (!r.length) return [];
   return r[0].values.map((v) => Object.fromEntries(r[0].columns.map((c, i) => [c, v[i]])));
 }
-function money(n) { return 'S/ ' + Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function badge(cod, texto) { return `<span class="badge ${TIPO_BADGE[cod] || 'b-def'}">${texto || cod || '—'}</span>`; }
+function numFmt(n, d = 2) { return Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function money(n) { return 'S/ ' + numFmt(n); }
+function badge(cod) { return `<span class="badge ${TIPO_BADGE[cod] || 'b-def'}">${TIPO_CORTO[cod] || cod || '—'}</span>`; }
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function toast(msg, tipo = '') {
@@ -73,19 +75,43 @@ function dashboard() {
   $('s-empresas').textContent = r.e;
   $('s-ultimo').textContent = r.u ? r.u.slice(0, 10) : '—';
   pintarTabla($('tabla-recientes'), $('recientes-vacio'),
-    filasDe('SELECT id, tipo, tipo_cod, serie, numero, cliente_nombre, total FROM conversiones ORDER BY id DESC LIMIT 5'),
-    (f) => `<td>${badge(f.tipo_cod, f.tipo)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.cliente_nombre)}</td><td class="r">${money(f.total)}</td><td class="td-ver">Ver ›</td>`);
+    filasDe('SELECT id, tipo_cod, serie, numero, cliente_nombre, total FROM conversiones ORDER BY id DESC LIMIT 5'),
+    (f) => `<td>${badge(f.tipo_cod)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.cliente_nombre)}</td><td class="r">${money(f.total)}</td><td class="td-ver">Ver ›</td>`);
 }
 
+// Comprobantes: agrupados por empresa emisora, con una fila de "quiebre" (separador)
+// entre cada RUC distinto, para que sea fácil ver a qué empresa pertenece cada uno.
+const COLS_HISTORIAL = 8;
 function listarHistorial(filtro = '') {
-  let sql = 'SELECT id, tipo, tipo_cod, serie, numero, ruc_emisor, cliente_nombre, moneda, total, fecha_emision, fecha_conversion FROM conversiones';
+  let sql = `SELECT id, tipo_cod, serie, numero, ruc_emisor, razon_social_emisor, cliente_doc, cliente_nombre, moneda, total, fecha_emision FROM conversiones`;
   const p = [];
-  if (filtro) { sql += ' WHERE serie LIKE ? OR numero LIKE ? OR ruc_emisor LIKE ? OR cliente_nombre LIKE ?'; const l = `%${filtro}%`; p.push(l, l, l, l); }
-  sql += ' ORDER BY id DESC';
-  pintarTabla($('tabla-historial'), $('historial-vacio'), filasDe(sql, p), (f) => {
-    const conv = (f.fecha_conversion || '').slice(0, 16).replace('T', ' ');
-    return `<td>${badge(f.tipo_cod, f.tipo)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.ruc_emisor)}</td><td>${esc(f.cliente_nombre)}</td><td class="r">${esc(f.moneda)} ${Number(f.total).toFixed(2)}</td><td>${esc(f.fecha_emision)}</td><td>${conv}</td><td class="td-ver">Ver PDF ›</td>`;
-  }, filtro);
+  if (filtro) { sql += ' WHERE serie LIKE ? OR numero LIKE ? OR ruc_emisor LIKE ? OR cliente_nombre LIKE ? OR cliente_doc LIKE ?'; const l = `%${filtro}%`; p.push(l, l, l, l, l); }
+  sql += ' ORDER BY ruc_emisor, id DESC';
+  const filas = filasDe(sql, p);
+
+  const tabla = $('tabla-historial'), vacio = $('historial-vacio');
+  const tb = tabla.querySelector('tbody');
+  tb.innerHTML = '';
+  if (!filas.length) {
+    tabla.hidden = true; vacio.hidden = false;
+    vacio.textContent = filtro ? 'Sin resultados para tu búsqueda.' : 'Aún no has convertido ningún comprobante.';
+    return;
+  }
+  let rucAnterior = null;
+  for (const f of filas) {
+    if (f.ruc_emisor !== rucAnterior) {
+      rucAnterior = f.ruc_emisor;
+      const trq = document.createElement('tr');
+      trq.className = 'quiebre';
+      trq.innerHTML = `<td colspan="${COLS_HISTORIAL}">${esc(f.razon_social_emisor || 'Sin razón social')} <span class="quiebre-ruc">RUC ${esc(f.ruc_emisor || '—')}</span></td>`;
+      tb.appendChild(trq);
+    }
+    const tr = document.createElement('tr');
+    tr.dataset.id = f.id;
+    tr.innerHTML = `<td>${badge(f.tipo_cod)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.ruc_emisor)}</td><td>${esc(f.cliente_nombre)}</td><td>${esc(f.cliente_doc)}</td><td class="r">${esc(f.moneda)} ${numFmt(f.total)}</td><td>${esc(f.fecha_emision)}</td><td class="td-ver">Ver PDF ›</td>`;
+    tb.appendChild(tr);
+  }
+  tabla.hidden = false; vacio.hidden = true;
 }
 
 function pintarTabla(tabla, vacio, filas, rowHtml, filtro) {
@@ -372,8 +398,11 @@ function router() {
   document.querySelectorAll('.nav-item').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === `#${clave}`));
   if (clave === 'comprobantes') listarHistorial($('buscar').value.trim());
   if (clave === 'empresas') listarEmpresas();
-  document.querySelector('.app').classList.remove('nav-open'); // cierra menú móvil
-  $('scroll') && ($('scroll').scrollTop = 0);
+  // El sidebar completo solo se ve en el Dashboard; en el resto se colapsa
+  // y queda accesible con el botón de hamburguesa (más espacio para tablas).
+  const app = document.querySelector('.app');
+  app.classList.toggle('sidebar-collapsed', clave !== 'dashboard');
+  app.classList.remove('nav-open'); // cierra el overlay si estaba abierto
 }
 window.addEventListener('hashchange', router);
 

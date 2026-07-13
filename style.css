@@ -34,7 +34,12 @@ body {
 .ic { width: 20px; height: 20px; fill: currentColor; flex: none; }
 
 /* ═══════════ App shell ═══════════ */
+/* Columnas fijas por posición (no auto-placement): cuando el sidebar pasa a
+   position:fixed sale del flujo del grid, y sin esto .main "hereda" la
+   primera columna en vez de la segunda. */
 .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+.sidebar { grid-column: 1; }
+.main { grid-column: 2; }
 
 .sidebar {
   background: linear-gradient(180deg, var(--brand-800), var(--brand-900));
@@ -174,7 +179,17 @@ input[type="file"]::file-selector-button {
 .grid tbody tr:last-child td { border-bottom: none; }
 .grid-click tbody tr { cursor: pointer; transition: background .1s; }
 .grid-click tbody tr:hover { background: #f2f7ff; }
+.grid-click tbody tr.quiebre { cursor: default; }
+.grid-click tbody tr.quiebre:hover { background: none; }
 .td-ver { color: var(--brand); font-weight: 700; }
+
+/* Fila separadora entre empresas distintas en la lista de comprobantes */
+tr.quiebre td {
+  background: var(--surface-2); color: var(--brand-800); font-weight: 700; font-size: 12.5px;
+  text-transform: uppercase; letter-spacing: .03em; padding: 9px 12px; white-space: nowrap;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+tr.quiebre .quiebre-ruc { color: var(--muted); font-weight: 600; text-transform: none; margin-left: 8px; letter-spacing: normal; }
 .badge { display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
 .b-01 { background: #e7f0ff; color: var(--brand); }
 .b-03 { background: #e4f6ec; color: var(--green); }
@@ -225,18 +240,37 @@ input[type="file"]::file-selector-button {
 .toast.err { border-left-color: #f87171; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.only-mobile { display: none; }
+/* El botón de hamburguesa solo se ve cuando el sidebar está colapsado
+   (fuera del Dashboard) o en pantallas angostas, donde el sidebar siempre
+   vive oculto detrás de él. */
+#btn-menu { display: none; }
+.app.sidebar-collapsed #btn-menu { display: grid; }
 
-/* ═══════════ Responsive ═══════════ */
+/* ═══════════ Sidebar colapsable en escritorio (fuera del Dashboard) ═══════════ */
+@media (min-width: 861px) {
+  .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
+  .app.sidebar-collapsed .sidebar {
+    position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh; z-index: 60;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .app.sidebar-collapsed.nav-open .sidebar { transform: none; }
+  .app.sidebar-collapsed.nav-open .scrim {
+    display: block; position: fixed; inset: 0; z-index: 55; background: rgba(6,15,31,.35);
+  }
+}
+
+/* ═══════════ Responsive (móvil: el sidebar siempre vive oculto) ═══════════ */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
+  .main { grid-column: 1; }
   .sidebar {
     position: fixed; z-index: 60; left: 0; top: 0; width: 260px; height: 100vh;
     transform: translateX(-100%); transition: transform .22s ease;
   }
   .app.nav-open .sidebar { transform: none; }
   .app.nav-open .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(6,15,31,.45); }
-  .only-mobile { display: grid; }
+  #btn-menu { display: grid; }
   .topbar-cta span { display: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .scroll { padding: 18px; }
