@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mini-pwa-poc-v1';
+const CACHE_NAME = 'mini-pwa-poc-v2';
 const ARCHIVOS = [
   './',
   './index.html',
@@ -6,6 +6,8 @@ const ARCHIVOS = [
   './app.js',
   './manifest.json',
   './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
   './sql-wasm.js',
   './sql-wasm.wasm',
 ];
