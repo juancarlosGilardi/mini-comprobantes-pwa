@@ -25,8 +25,33 @@
     </div>
   </section>
 
+  <section class="card" id="seccion-xml" hidden>
+    <h2>2. Convertir XML (Clave SOL) a PDF</h2>
+    <form id="form-xml">
+      <label>Archivo XML o ZIP del comprobante
+        <input type="file" id="xml-archivo" accept=".xml,.zip" required>
+      </label>
+      <label>Logo de la empresa (opcional, se recuerda por RUC)
+        <input type="file" id="logo-archivo" accept="image/*">
+      </label>
+      <button type="submit" class="btn-principal">Convertir a PDF</button>
+    </form>
+    <p id="mensaje-xml" role="status"></p>
+  </section>
+
+  <section class="card" id="seccion-historial" hidden>
+    <h2>3. Historial de comprobantes</h2>
+    <button id="btn-historial">Ver historial</button>
+    <table class="grid" id="tabla-historial" hidden>
+      <thead>
+        <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
   <section class="card" id="seccion-form" hidden>
-    <h2>2. Nuevo comprobante</h2>
+    <h2>4. Prueba manual (formulario de prueba)</h2>
     <form id="form-comprobante">
       <label>Tipo
         <select id="tipo" required>
@@ -50,7 +75,7 @@
   </section>
 
   <section class="card" id="seccion-lista" hidden>
-    <h2>3. Comprobantes guardados</h2>
+    <h2>5. Comprobantes de prueba guardados</h2>
     <button id="btn-listar">Ver comprobantes</button>
     <table class="grid" id="tabla-comprobantes" hidden>
       <thead>
@@ -62,6 +87,8 @@
 </main>
 
 <script src="sql-wasm.js"></script>
+<script src="fflate.min.js"></script>
+<script src="ubl-parser.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mini-pwa-poc-v2';
+const CACHE_NAME = 'mini-pwa-poc-v4';
 const ARCHIVOS = [
   './',
   './index.html',
@@ -10,6 +10,8 @@ const ARCHIVOS = [
   './icon-512.png',
   './sql-wasm.js',
   './sql-wasm.wasm',
+  './fflate.min.js',
+  './ubl-parser.js',
 ];
 
 self.addEventListener('install', (evento) => {
