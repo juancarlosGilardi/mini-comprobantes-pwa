@@ -12,21 +12,29 @@
 <body>
 <header>
   <h1>Mini Comprobantes</h1>
-  <p class="subtitulo">PoC: PWA instalable + SQLite real en tu disco</p>
+  <p class="subtitulo">Convierte el XML de tu comprobante en PDF — tus datos quedan en tu disco, nunca en la nube.</p>
 </header>
 
 <main>
-  <section class="card" id="seccion-archivo">
-    <h2>1. Archivo de datos</h2>
-    <p id="estado-archivo">Sin archivo abierto.</p>
-    <div class="botones">
-      <button id="btn-abrir">Abrir archivo existente</button>
-      <button id="btn-crear">Crear archivo nuevo</button>
+  <!-- Dashboard -->
+  <section class="dashboard">
+    <div class="stat">
+      <div class="stat-num" id="stat-total">0</div>
+      <div class="stat-lbl">Comprobantes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-monto">S/ 0.00</div>
+      <div class="stat-lbl">Monto total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-ultimo">—</div>
+      <div class="stat-lbl">Último convertido</div>
     </div>
   </section>
 
-  <section class="card" id="seccion-xml" hidden>
-    <h2>2. Convertir XML (Clave SOL) a PDF</h2>
+  <!-- Convertir XML -->
+  <section class="card">
+    <h2>Convertir XML a PDF</h2>
     <form id="form-xml">
       <label>Archivo XML o ZIP del comprobante
         <input type="file" id="xml-archivo" accept=".xml,.zip" required>
@@ -39,50 +47,33 @@
     <p id="mensaje-xml" role="status"></p>
   </section>
 
-  <section class="card" id="seccion-historial" hidden>
-    <h2>3. Historial de comprobantes</h2>
-    <button id="btn-historial">Ver historial</button>
-    <table class="grid" id="tabla-historial" hidden>
-      <thead>
-        <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <!-- Historial -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Historial de comprobantes</h2>
+      <input type="search" id="buscar" placeholder="Buscar…" autocomplete="off">
+    </div>
+    <div class="tabla-wrap">
+      <table class="grid" id="tabla-historial">
+        <thead>
+          <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="historial-vacio" class="vacio">Aún no has convertido ningún comprobante.</p>
+    </div>
   </section>
 
-  <section class="card" id="seccion-form" hidden>
-    <h2>4. Prueba manual (formulario de prueba)</h2>
-    <form id="form-comprobante">
-      <label>Tipo
-        <select id="tipo" required>
-          <option value="Factura">Factura</option>
-          <option value="Boleta">Boleta</option>
-          <option value="Nota de crédito">Nota de crédito</option>
-        </select>
-      </label>
-      <label>Monto (S/)
-        <input type="number" id="monto" step="0.01" min="0" required>
-      </label>
-      <label>Fecha
-        <input type="date" id="fecha" required>
-      </label>
-      <label>Descripción
-        <input type="text" id="descripcion" maxlength="200">
-      </label>
-      <button type="submit" class="btn-principal">Guardar comprobante</button>
-    </form>
-    <p id="mensaje-guardado" role="status"></p>
-  </section>
-
-  <section class="card" id="seccion-lista" hidden>
-    <h2>5. Comprobantes de prueba guardados</h2>
-    <button id="btn-listar">Ver comprobantes</button>
-    <table class="grid" id="tabla-comprobantes" hidden>
-      <thead>
-        <tr><th>ID</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Descripción</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <!-- Datos (opcional) -->
+  <section class="card datos">
+    <h2>Copia de seguridad</h2>
+    <p class="ayuda">Tus datos se guardan solos en este equipo. Si quieres un respaldo o pasarlos a otra computadora, exporta o importa el archivo <code>.sqlite</code>.</p>
+    <div class="botones">
+      <button id="btn-exportar" class="btn-sec">Exportar copia (.sqlite)</button>
+      <button id="btn-importar" class="btn-sec">Importar copia (.sqlite)</button>
+      <input type="file" id="importar-archivo" accept=".sqlite,.db" hidden>
+    </div>
+    <p id="mensaje-datos" role="status"></p>
   </section>
 </main>
 

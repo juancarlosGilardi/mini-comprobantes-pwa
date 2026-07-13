@@ -27,15 +27,31 @@ header {
 }
 
 header h1 { margin: 0 0 0.25rem; }
-.subtitulo { margin: 0; color: var(--oro); font-size: 0.9rem; }
+.subtitulo { margin: 0; color: var(--oro); font-size: 0.9rem; max-width: 60ch; }
 
 main {
-  max-width: 640px;
+  max-width: 820px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
+
+/* Dashboard */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.stat {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+.stat-num { font-size: 1.6rem; font-weight: 700; color: var(--azul); line-height: 1.2; }
+.stat-lbl { font-size: 0.8rem; color: var(--gris); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.03em; }
 
 .card {
   background: white;
@@ -50,6 +66,16 @@ main {
   color: var(--azul2);
 }
 
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.card-head h2 { margin-bottom: 0; }
+#buscar { max-width: 220px; }
+
 .botones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 button {
@@ -61,11 +87,13 @@ button {
   font-size: 0.95rem;
   cursor: pointer;
 }
-
 button:hover { background: var(--azul2); }
 
 button.btn-principal { background: var(--grana); }
 button.btn-principal:hover { background: #7a0033; }
+
+button.btn-sec { background: white; color: var(--azul); border: 1px solid var(--azul); }
+button.btn-sec:hover { background: var(--bg); }
 
 form { display: flex; flex-direction: column; gap: 0.75rem; }
 
@@ -77,21 +105,32 @@ input, select {
   border-radius: 6px;
   font-size: 1rem;
 }
+input[type="search"] { font-size: 0.9rem; }
+
+.tabla-wrap { overflow-x: auto; }
 
 table.grid {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
 }
-
 table.grid th, table.grid td {
   border: 1px solid var(--line);
   padding: 0.5rem;
   text-align: left;
   font-size: 0.9rem;
+  white-space: nowrap;
 }
-
 table.grid th { background: var(--bg); }
 
-#mensaje-guardado { color: var(--azul); font-weight: 600; min-height: 1.2em; }
-#estado-archivo { color: var(--gris); }
+.vacio { color: var(--gris); font-size: 0.9rem; margin: 1rem 0 0; }
+
+.datos .ayuda { font-size: 0.85rem; color: var(--gris); margin-top: 0; }
+.datos code { background: var(--bg); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.85em; }
+
+#mensaje-xml, #mensaje-datos { color: var(--azul); font-weight: 600; min-height: 1.2em; margin-bottom: 0; }
+
+@media (max-width: 560px) {
+  .dashboard { grid-template-columns: 1fr; }
+  .stat { text-align: left; }
+}

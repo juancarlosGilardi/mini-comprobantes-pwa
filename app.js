@@ -6,71 +6,41 @@ const API_BASE = (location.hostname === 'localhost' || location.hostname === '12
 
 let SQL = null;
 let db = null;
-let fileHandle = null;
 
-const estadoArchivo = document.getElementById('estado-archivo');
-const seccionForm = document.getElementById('seccion-form');
-const seccionLista = document.getElementById('seccion-lista');
-const mensajeGuardado = document.getElementById('mensaje-guardado');
-const tabla = document.getElementById('tabla-comprobantes');
-const seccionXml = document.getElementById('seccion-xml');
-const seccionHistorial = document.getElementById('seccion-historial');
-const mensajeXml = document.getElementById('mensaje-xml');
-const tablaHistorial = document.getElementById('tabla-historial');
+// ── Persistencia automática: la base SQLite vive en IndexedDB (en el disco del
+//    equipo, nunca en la nube). Sin selector de archivo, sin volver a pedir permiso. ──
+const IDB_NAME = 'mini-comprobantes';
+const IDB_STORE = 'kv';
+const DB_KEY = 'sqlite-db';
 
-const DB_NAME = 'mini-pwa-poc';
-const STORE_NAME = 'handles';
-const HANDLE_KEY = 'archivo-datos';
-
-function abrirIndexedDB() {
+function abrirIdb() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function guardarHandleEnIndexedDB(handle) {
-  const idb = await abrirIndexedDB();
-  return new Promise((resolve, reject) => {
-    const tx = idb.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function leerHandleDeIndexedDB() {
-  const idb = await abrirIndexedDB();
-  return new Promise((resolve, reject) => {
-    const tx = idb.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
+function idbGet(key) {
+  return abrirIdb().then((idb) => new Promise((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
-  });
+  }));
 }
 
-async function asegurarPermiso(handle) {
-  const opciones = { mode: 'readwrite' };
-  if ((await handle.queryPermission(opciones)) === 'granted') return true;
-  return (await handle.requestPermission(opciones)) === 'granted';
+function idbPut(key, value) {
+  return abrirIdb().then((idb) => new Promise((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
 }
 
-async function inicializarSQL() {
-  if (!SQL) {
-    SQL = await initSqlJs({ locateFile: () => 'sql-wasm.wasm' });
-  }
-}
-
-function crearTablaSiNoExiste() {
-  db.run(`CREATE TABLE IF NOT EXISTS comprobantes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo TEXT NOT NULL,
-    monto REAL NOT NULL,
-    fecha TEXT NOT NULL,
-    descripcion TEXT
-  )`);
+function crearTablas() {
   db.run(`CREATE TABLE IF NOT EXISTS logos (
     ruc TEXT PRIMARY KEY,
     png_blob BLOB NOT NULL,
@@ -92,119 +62,88 @@ function crearTablaSiNoExiste() {
   )`);
 }
 
-async function cargarDbDesdeArchivo(handle) {
-  const archivo = await handle.getFile();
-  const bytes = new Uint8Array(await archivo.arrayBuffer());
-  db = bytes.length > 0 ? new SQL.Database(bytes) : new SQL.Database();
-  crearTablaSiNoExiste();
+async function persistir() {
+  await idbPut(DB_KEY, db.export());
 }
 
-async function escribirDbEnArchivo() {
-  const bytes = db.export();
-  const writable = await fileHandle.createWritable();
-  await writable.write(bytes);
-  await writable.close();
-}
-
-async function activarUI(nombreArchivo) {
-  estadoArchivo.textContent = `Archivo activo: ${nombreArchivo}`;
-  seccionXml.hidden = false;
-  seccionHistorial.hidden = false;
-  seccionForm.hidden = false;
-  seccionLista.hidden = false;
-  document.getElementById('fecha').valueAsDate = new Date();
-}
-
-async function abrirArchivoExistente() {
-  try {
-    const [handle] = await window.showOpenFilePicker({
-      types: [{ description: 'Base SQLite', accept: { 'application/x-sqlite3': ['.sqlite', '.db'] } }],
-    });
-    await inicializarSQL();
-    await cargarDbDesdeArchivo(handle);
-    fileHandle = handle;
-    await guardarHandleEnIndexedDB(handle);
-    await activarUI(handle.name);
-  } catch (err) {
-    if (err.name !== 'AbortError') console.error(err);
+async function inicializar() {
+  SQL = await initSqlJs({ locateFile: () => 'sql-wasm.wasm' });
+  // Pide almacenamiento persistente (evita que el navegador borre los datos).
+  if (navigator.storage && navigator.storage.persist) {
+    try { await navigator.storage.persist(); } catch (_) {}
   }
+  const bytes = await idbGet(DB_KEY);
+  db = bytes ? new SQL.Database(new Uint8Array(bytes)) : new SQL.Database();
+  crearTablas();
+  if (!bytes) await persistir();
+  refrescar();
 }
 
-async function crearArchivoNuevo() {
-  try {
-    const handle = await window.showSaveFilePicker({
-      suggestedName: 'comprobantes.sqlite',
-      types: [{ description: 'Base SQLite', accept: { 'application/x-sqlite3': ['.sqlite'] } }],
-    });
-    await inicializarSQL();
-    db = new SQL.Database();
-    crearTablaSiNoExiste();
-    fileHandle = handle;
-    await escribirDbEnArchivo();
-    await guardarHandleEnIndexedDB(handle);
-    await activarUI(handle.name);
-  } catch (err) {
-    if (err.name !== 'AbortError') console.error(err);
+// ── Consultas / render ──
+
+function filasDe(sql, params = []) {
+  const res = db.exec(sql, params);
+  if (!res.length) return [];
+  const cols = res[0].columns;
+  return res[0].values.map((v) => Object.fromEntries(cols.map((c, i) => [c, v[i]])));
+}
+
+function refrescar(filtro = '') {
+  actualizarDashboard();
+  listarHistorial(filtro);
+}
+
+function actualizarDashboard() {
+  const r = filasDe('SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS suma, MAX(fecha_conversion) AS ult FROM conversiones')[0];
+  document.getElementById('stat-total').textContent = r.n;
+  document.getElementById('stat-monto').textContent = 'S/ ' + Number(r.suma).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('stat-ultimo').textContent = r.ult ? r.ult.slice(0, 10) : '—';
+}
+
+function listarHistorial(filtro = '') {
+  let sql = 'SELECT tipo, serie, numero, ruc_emisor, cliente_nombre, moneda, total, fecha_emision, fecha_conversion FROM conversiones';
+  const params = [];
+  if (filtro) {
+    sql += ` WHERE serie LIKE ? OR numero LIKE ? OR ruc_emisor LIKE ? OR cliente_nombre LIKE ?`;
+    const like = `%${filtro}%`;
+    params.push(like, like, like, like);
   }
-}
+  sql += ' ORDER BY id DESC';
+  const filas = filasDe(sql, params);
 
-async function intentarRestaurarSesionAnterior() {
-  const handle = await leerHandleDeIndexedDB();
-  if (!handle) return;
-  const permitido = await asegurarPermiso(handle);
-  if (!permitido) return;
-  await inicializarSQL();
-  await cargarDbDesdeArchivo(handle);
-  fileHandle = handle;
-  await activarUI(handle.name);
-}
-
-function pintarTabla(filas) {
+  const tabla = document.getElementById('tabla-historial');
+  const vacio = document.getElementById('historial-vacio');
   const tbody = tabla.querySelector('tbody');
   tbody.innerHTML = '';
-  for (const fila of filas) {
+  if (!filas.length) {
+    tabla.hidden = true;
+    vacio.hidden = false;
+    vacio.textContent = filtro ? 'Sin resultados para tu búsqueda.' : 'Aún no has convertido ningún comprobante.';
+    return;
+  }
+  for (const f of filas) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${fila.id}</td><td>${fila.tipo}</td><td>S/ ${fila.monto.toFixed(2)}</td><td>${fila.fecha}</td><td>${fila.descripcion ?? ''}</td>`;
+    const conv = (f.fecha_conversion || '').slice(0, 16).replace('T', ' ');
+    tr.innerHTML = `<td>${f.tipo || ''}</td><td>${f.serie}-${f.numero}</td><td>${f.ruc_emisor || ''}</td><td>${f.cliente_nombre || ''}</td><td>${f.moneda || ''} ${Number(f.total).toFixed(2)}</td><td>${f.fecha_emision || ''}</td><td>${conv}</td>`;
     tbody.appendChild(tr);
   }
   tabla.hidden = false;
+  vacio.hidden = true;
 }
 
-function listarComprobantes() {
-  const resultado = db.exec('SELECT id, tipo, monto, fecha, descripcion FROM comprobantes ORDER BY id DESC');
-  if (resultado.length === 0) {
-    pintarTabla([]);
-    return;
-  }
-  const columnas = resultado[0].columns;
-  const filas = resultado[0].values.map((valores) => Object.fromEntries(columnas.map((col, i) => [col, valores[i]])));
-  pintarTabla(filas);
+// ── Logo por RUC ──
+
+function obtenerLogoPorRuc(ruc) {
+  const res = db.exec('SELECT png_blob FROM logos WHERE ruc = ?', [ruc]);
+  if (!res.length || !res[0].values.length) return null;
+  return new Uint8Array(res[0].values[0][0]);
 }
 
-document.getElementById('btn-abrir').addEventListener('click', abrirArchivoExistente);
-document.getElementById('btn-crear').addEventListener('click', crearArchivoNuevo);
-document.getElementById('btn-listar').addEventListener('click', listarComprobantes);
+async function guardarLogoPorRuc(ruc, pngBytes) {
+  db.run('INSERT INTO logos (ruc, png_blob, actualizado) VALUES (?, ?, ?) ON CONFLICT(ruc) DO UPDATE SET png_blob = excluded.png_blob, actualizado = excluded.actualizado', [ruc, pngBytes, new Date().toISOString()]);
+}
 
-document.getElementById('form-comprobante').addEventListener('submit', async (evento) => {
-  evento.preventDefault();
-  const tipo = document.getElementById('tipo').value;
-  const monto = parseFloat(document.getElementById('monto').value);
-  const fecha = document.getElementById('fecha').value;
-  const descripcion = document.getElementById('descripcion').value;
-
-  db.run('INSERT INTO comprobantes (tipo, monto, fecha, descripcion) VALUES (?, ?, ?, ?)', [tipo, monto, fecha, descripcion]);
-  await escribirDbEnArchivo();
-
-  mensajeGuardado.textContent = 'Comprobante guardado correctamente.';
-  evento.target.reset();
-  document.getElementById('fecha').valueAsDate = new Date();
-  document.getElementById('tipo').focus();
-  setTimeout(() => { mensajeGuardado.textContent = ''; }, 3000);
-
-  if (!tabla.hidden) listarComprobantes();
-});
-
-// ═══ Conversión XML (Clave SOL) → PDF ═══
+// ── Utilidades de archivo ──
 
 async function leerXmlDesdeArchivo(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -232,17 +171,6 @@ async function imagenArchivoAPngBytes(file) {
   return bytes;
 }
 
-function obtenerLogoPorRuc(ruc) {
-  const res = db.exec('SELECT png_blob FROM logos WHERE ruc = ?', [ruc]);
-  if (!res.length || !res[0].values.length) return null;
-  return new Uint8Array(res[0].values[0][0]);
-}
-
-async function guardarLogoPorRuc(ruc, pngBytes) {
-  db.run('INSERT INTO logos (ruc, png_blob, actualizado) VALUES (?, ?, ?) ON CONFLICT(ruc) DO UPDATE SET png_blob = excluded.png_blob, actualizado = excluded.actualizado', [ruc, pngBytes, new Date().toISOString()]);
-  await escribirDbEnArchivo();
-}
-
 async function registrarConversion(parsed) {
   const emisor = parsed.emisor || {};
   const cliente = parsed.cliente || {};
@@ -254,36 +182,24 @@ async function registrarConversion(parsed) {
     parsed.moneda || '', Number(parsed.total) || 0,
     parsed.fecha || '', new Date().toISOString(),
   ]);
-  await escribirDbEnArchivo();
 }
 
-function pintarTablaHistorial(filas) {
-  const tbody = tablaHistorial.querySelector('tbody');
-  tbody.innerHTML = '';
-  for (const fila of filas) {
-    const tr = document.createElement('tr');
-    const convertido = (fila.fecha_conversion || '').slice(0, 16).replace('T', ' ');
-    tr.innerHTML = `<td>${fila.tipo}</td><td>${fila.serie}-${fila.numero}</td><td>${fila.ruc_emisor}</td><td>${fila.cliente_nombre}</td><td>${fila.moneda} ${Number(fila.total).toFixed(2)}</td><td>${fila.fecha_emision}</td><td>${convertido}</td>`;
-    tbody.appendChild(tr);
-  }
-  tablaHistorial.hidden = false;
+function descargarBlob(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
-function listarHistorial() {
-  const resultado = db.exec('SELECT tipo, serie, numero, ruc_emisor, cliente_nombre, moneda, total, fecha_emision, fecha_conversion FROM conversiones ORDER BY id DESC');
-  if (resultado.length === 0) {
-    pintarTablaHistorial([]);
-    return;
-  }
-  const columnas = resultado[0].columns;
-  const filas = resultado[0].values.map((valores) => Object.fromEntries(columnas.map((col, i) => [col, valores[i]])));
-  pintarTablaHistorial(filas);
-}
-
-document.getElementById('btn-historial').addEventListener('click', listarHistorial);
+// ── Convertir XML → PDF ──
 
 document.getElementById('form-xml').addEventListener('submit', async (evento) => {
   evento.preventDefault();
+  const mensajeXml = document.getElementById('mensaje-xml');
   mensajeXml.textContent = 'Procesando…';
   try {
     const xmlFile = document.getElementById('xml-archivo').files[0];
@@ -303,14 +219,12 @@ document.getElementById('form-xml').addEventListener('submit', async (evento) =>
       logoPngBytes = obtenerLogoPorRuc(ruc);
     }
 
-    // El PDF lo genera la API sin estado (reutiliza el motor Python probado).
-    // Se envía el archivo original (XML o ZIP) tal cual; el logo va aparte.
+    // El PDF lo genera la API sin estado (motor Python probado).
     const formData = new FormData();
     formData.append('xml', xmlFile, xmlFile.name);
     if (logoPngBytes) {
       formData.append('logo', new Blob([logoPngBytes], { type: 'image/png' }), 'logo.png');
     }
-
     const respuesta = await fetch(`${API_BASE}/api/pwa/pdf`, { method: 'POST', body: formData });
     if (!respuesta.ok) {
       let detalle = `La API respondió ${respuesta.status}.`;
@@ -318,30 +232,65 @@ document.getElementById('form-xml').addEventListener('submit', async (evento) =>
       throw new Error(detalle);
     }
     const blob = await respuesta.blob();
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = `${parsed.serie}-${parsed.numero}.pdf`;
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-    URL.revokeObjectURL(url);
+    descargarBlob(blob, `${parsed.serie}-${parsed.numero}.pdf`);
 
     await registrarConversion(parsed);
+    await persistir();
+    refrescar(document.getElementById('buscar').value.trim());
 
     mensajeXml.textContent = `PDF generado: ${parsed.serie}-${parsed.numero}.pdf`;
     evento.target.reset();
-    if (!tablaHistorial.hidden) listarHistorial();
+    setTimeout(() => { mensajeXml.textContent = ''; }, 4000);
   } catch (err) {
     console.error(err);
     mensajeXml.textContent = `Error: ${err.message}`;
   }
 });
 
+// ── Búsqueda en el historial ──
+document.getElementById('buscar').addEventListener('input', (e) => {
+  listarHistorial(e.target.value.trim());
+});
+
+// ── Exportar / importar copia .sqlite ──
+document.getElementById('btn-exportar').addEventListener('click', () => {
+  const blob = new Blob([db.export()], { type: 'application/x-sqlite3' });
+  const fecha = new Date().toISOString().slice(0, 10);
+  descargarBlob(blob, `comprobantes-${fecha}.sqlite`);
+});
+
+document.getElementById('btn-importar').addEventListener('click', () => {
+  document.getElementById('importar-archivo').click();
+});
+
+document.getElementById('importar-archivo').addEventListener('change', async (e) => {
+  const mensajeDatos = document.getElementById('mensaje-datos');
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const prueba = new SQL.Database(bytes);
+    prueba.exec('SELECT 1 FROM conversiones LIMIT 1'); // valida que sea una base compatible
+    db = prueba;
+    crearTablas();
+    await persistir();
+    refrescar();
+    mensajeDatos.textContent = 'Copia importada correctamente.';
+  } catch (err) {
+    mensajeDatos.textContent = 'Ese archivo no es una copia válida de esta app.';
+  }
+  e.target.value = '';
+  setTimeout(() => { mensajeDatos.textContent = ''; }, 4000);
+});
+
+// ── Service worker + arranque ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').catch((err) => console.error('SW error:', err));
   });
 }
 
-intentarRestaurarSesionAnterior();
+inicializar().catch((err) => {
+  console.error(err);
+  document.getElementById('mensaje-xml').textContent = 'No se pudo iniciar la base de datos local: ' + err.message;
+});
