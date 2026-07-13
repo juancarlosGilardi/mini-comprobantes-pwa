@@ -16,66 +16,85 @@
 </header>
 
 <main>
-  <!-- Dashboard -->
-  <section class="dashboard">
-    <div class="stat">
-      <div class="stat-num" id="stat-total">0</div>
-      <div class="stat-lbl">Comprobantes</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="stat-monto">S/ 0.00</div>
-      <div class="stat-lbl">Monto total</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="stat-ultimo">—</div>
-      <div class="stat-lbl">Último convertido</div>
-    </div>
-  </section>
+  <!-- ═══════ VISTA INICIO ═══════ -->
+  <div id="vista-home">
+    <section class="dashboard">
+      <a class="stat stat-link" href="#comprobantes" title="Ver todos los comprobantes">
+        <div class="stat-num" id="stat-total">0</div>
+        <div class="stat-lbl">Comprobantes&nbsp;›</div>
+      </a>
+      <div class="stat">
+        <div class="stat-num" id="stat-monto">S/ 0.00</div>
+        <div class="stat-lbl">Monto total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-ultimo">—</div>
+        <div class="stat-lbl">Último convertido</div>
+      </div>
+    </section>
 
-  <!-- Convertir XML -->
-  <section class="card">
-    <h2>Convertir XML a PDF</h2>
-    <form id="form-xml">
-      <label>Archivo XML o ZIP del comprobante
-        <input type="file" id="xml-archivo" accept=".xml,.zip" required>
-      </label>
-      <label>Logo de la empresa (opcional, se recuerda por RUC)
-        <input type="file" id="logo-archivo" accept="image/*">
-      </label>
-      <button type="submit" class="btn-principal">Convertir a PDF</button>
-    </form>
-    <p id="mensaje-xml" role="status"></p>
-  </section>
+    <section class="card">
+      <h2>Convertir XML a PDF</h2>
+      <form id="form-xml">
+        <label>Archivo XML o ZIP del comprobante
+          <input type="file" id="xml-archivo" accept=".xml,.zip" required>
+        </label>
+        <label>Logo de la empresa (opcional, se recuerda por RUC)
+          <input type="file" id="logo-archivo" accept="image/*">
+        </label>
+        <button type="submit" class="btn-principal">Convertir a PDF</button>
+      </form>
+      <p id="mensaje-xml" role="status"></p>
+    </section>
 
-  <!-- Historial -->
-  <section class="card">
-    <div class="card-head">
-      <h2>Historial de comprobantes</h2>
-      <input type="search" id="buscar" placeholder="Buscar…" autocomplete="off">
-    </div>
-    <div class="tabla-wrap">
-      <table class="grid" id="tabla-historial">
-        <thead>
-          <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p id="historial-vacio" class="vacio">Aún no has convertido ningún comprobante.</p>
-    </div>
-  </section>
+    <section class="card datos">
+      <h2>Copia de seguridad</h2>
+      <p class="ayuda">Tus datos se guardan solos en este equipo. Si quieres un respaldo o pasarlos a otra computadora, exporta o importa el archivo <code>.sqlite</code>.</p>
+      <div class="botones">
+        <button id="btn-exportar" class="btn-sec">Exportar copia (.sqlite)</button>
+        <button id="btn-importar" class="btn-sec">Importar copia (.sqlite)</button>
+        <input type="file" id="importar-archivo" accept=".sqlite,.db" hidden>
+      </div>
+      <p id="mensaje-datos" role="status"></p>
+    </section>
+  </div>
 
-  <!-- Datos (opcional) -->
-  <section class="card datos">
-    <h2>Copia de seguridad</h2>
-    <p class="ayuda">Tus datos se guardan solos en este equipo. Si quieres un respaldo o pasarlos a otra computadora, exporta o importa el archivo <code>.sqlite</code>.</p>
-    <div class="botones">
-      <button id="btn-exportar" class="btn-sec">Exportar copia (.sqlite)</button>
-      <button id="btn-importar" class="btn-sec">Importar copia (.sqlite)</button>
-      <input type="file" id="importar-archivo" accept=".sqlite,.db" hidden>
-    </div>
-    <p id="mensaje-datos" role="status"></p>
-  </section>
+  <!-- ═══════ VISTA LISTA DE COMPROBANTES ═══════ -->
+  <div id="vista-lista" hidden>
+    <p><a href="#" class="volver" id="volver">‹ Volver al inicio</a></p>
+    <section class="card">
+      <div class="card-head">
+        <h2>Comprobantes</h2>
+        <input type="search" id="buscar" placeholder="Buscar…" autocomplete="off">
+      </div>
+      <p class="ayuda">Haz clic en un comprobante para ver e imprimir su PDF.</p>
+      <div class="tabla-wrap">
+        <table class="grid grid-click" id="tabla-historial">
+          <thead>
+            <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="historial-vacio" class="vacio">Aún no has convertido ningún comprobante.</p>
+      </div>
+    </section>
+  </div>
 </main>
+
+<!-- ═══════ VISOR DE PDF ═══════ -->
+<div id="visor" hidden>
+  <div class="visor-panel">
+    <div class="visor-bar">
+      <span id="visor-titulo">Comprobante</span>
+      <div class="visor-acciones">
+        <button id="visor-imprimir" class="btn-principal">Imprimir</button>
+        <button id="visor-descargar" class="btn-sec">Descargar</button>
+        <button id="visor-cerrar" class="btn-sec">Cerrar</button>
+      </div>
+    </div>
+    <iframe id="visor-frame" title="Vista del comprobante"></iframe>
+  </div>
+</div>
 
 <script src="sql-wasm.js"></script>
 <script src="fflate.min.js"></script>

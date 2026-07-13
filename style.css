@@ -52,6 +52,13 @@ main {
 }
 .stat-num { font-size: 1.6rem; font-weight: 700; color: var(--azul); line-height: 1.2; }
 .stat-lbl { font-size: 0.8rem; color: var(--gris); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.03em; }
+a.stat-link { text-decoration: none; display: block; transition: border-color 0.15s, transform 0.05s; }
+a.stat-link:hover { border-color: var(--azul); }
+a.stat-link:active { transform: scale(0.99); }
+a.stat-link .stat-lbl { color: var(--azul); }
+
+.volver { color: var(--azul); text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+.volver:hover { text-decoration: underline; }
 
 .card {
   background: white;
@@ -123,7 +130,49 @@ table.grid th, table.grid td {
 }
 table.grid th { background: var(--bg); }
 
+.grid-click tbody tr { cursor: pointer; }
+.grid-click tbody tr:hover { background: #f4f8fd; }
+.grid td.ver { color: var(--azul); font-weight: 600; white-space: nowrap; }
+
 .vacio { color: var(--gris); font-size: 0.9rem; margin: 1rem 0 0; }
+
+/* Visor de PDF */
+#visor {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+#visor[hidden] { display: none; }
+.visor-panel {
+  background: white;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 900px;
+  height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.visor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--azul);
+  color: white;
+  flex-wrap: wrap;
+}
+#visor-titulo { font-weight: 700; }
+.visor-acciones { display: flex; gap: 0.5rem; }
+.visor-bar .btn-sec { background: transparent; color: white; border-color: rgba(255,255,255,0.6); }
+.visor-bar .btn-sec:hover { background: rgba(255,255,255,0.15); }
+#visor-frame { flex: 1; width: 100%; border: none; }
 
 .datos .ayuda { font-size: 0.85rem; color: var(--gris); margin-top: 0; }
 .datos code { background: var(--bg); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.85em; }

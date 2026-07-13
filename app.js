@@ -58,8 +58,11 @@ function crearTablas() {
     moneda TEXT,
     total REAL,
     fecha_emision TEXT,
-    fecha_conversion TEXT
+    fecha_conversion TEXT,
+    pdf_blob BLOB
   )`);
+  // Migración para bases creadas antes de guardar el PDF.
+  try { db.run('ALTER TABLE conversiones ADD COLUMN pdf_blob BLOB'); } catch (_) {}
 }
 
 async function persistir() {
@@ -68,7 +71,6 @@ async function persistir() {
 
 async function inicializar() {
   SQL = await initSqlJs({ locateFile: () => 'sql-wasm.wasm' });
-  // Pide almacenamiento persistente (evita que el navegador borre los datos).
   if (navigator.storage && navigator.storage.persist) {
     try { await navigator.storage.persist(); } catch (_) {}
   }
@@ -77,6 +79,7 @@ async function inicializar() {
   crearTablas();
   if (!bytes) await persistir();
   refrescar();
+  router();
 }
 
 // ── Consultas / render ──
@@ -101,7 +104,7 @@ function actualizarDashboard() {
 }
 
 function listarHistorial(filtro = '') {
-  let sql = 'SELECT tipo, serie, numero, ruc_emisor, cliente_nombre, moneda, total, fecha_emision, fecha_conversion FROM conversiones';
+  let sql = 'SELECT id, tipo, serie, numero, ruc_emisor, cliente_nombre, moneda, total, fecha_emision, fecha_conversion FROM conversiones';
   const params = [];
   if (filtro) {
     sql += ` WHERE serie LIKE ? OR numero LIKE ? OR ruc_emisor LIKE ? OR cliente_nombre LIKE ?`;
@@ -123,8 +126,9 @@ function listarHistorial(filtro = '') {
   }
   for (const f of filas) {
     const tr = document.createElement('tr');
+    tr.dataset.id = f.id;
     const conv = (f.fecha_conversion || '').slice(0, 16).replace('T', ' ');
-    tr.innerHTML = `<td>${f.tipo || ''}</td><td>${f.serie}-${f.numero}</td><td>${f.ruc_emisor || ''}</td><td>${f.cliente_nombre || ''}</td><td>${f.moneda || ''} ${Number(f.total).toFixed(2)}</td><td>${f.fecha_emision || ''}</td><td>${conv}</td>`;
+    tr.innerHTML = `<td>${f.tipo || ''}</td><td>${f.serie}-${f.numero}</td><td>${f.ruc_emisor || ''}</td><td>${f.cliente_nombre || ''}</td><td>${f.moneda || ''} ${Number(f.total).toFixed(2)}</td><td>${f.fecha_emision || ''}</td><td>${conv}</td><td class="ver">Ver PDF ›</td>`;
     tbody.appendChild(tr);
   }
   tabla.hidden = false;
@@ -139,7 +143,7 @@ function obtenerLogoPorRuc(ruc) {
   return new Uint8Array(res[0].values[0][0]);
 }
 
-async function guardarLogoPorRuc(ruc, pngBytes) {
+function guardarLogoPorRuc(ruc, pngBytes) {
   db.run('INSERT INTO logos (ruc, png_blob, actualizado) VALUES (?, ?, ?) ON CONFLICT(ruc) DO UPDATE SET png_blob = excluded.png_blob, actualizado = excluded.actualizado', [ruc, pngBytes, new Date().toISOString()]);
 }
 
@@ -171,16 +175,16 @@ async function imagenArchivoAPngBytes(file) {
   return bytes;
 }
 
-async function registrarConversion(parsed) {
+function registrarConversion(parsed, pdfBytes) {
   const emisor = parsed.emisor || {};
   const cliente = parsed.cliente || {};
-  db.run(`INSERT INTO conversiones (tipo, serie, numero, ruc_emisor, razon_social_emisor, cliente_doc, cliente_nombre, moneda, total, fecha_emision, fecha_conversion)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+  db.run(`INSERT INTO conversiones (tipo, serie, numero, ruc_emisor, razon_social_emisor, cliente_doc, cliente_nombre, moneda, total, fecha_emision, fecha_conversion, pdf_blob)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
     parsed.tipo_desc || parsed.tipo || '', parsed.serie || '', parsed.numero || '',
     emisor.ruc || '', emisor.nombre || emisor.nombre_comercial || '',
     cliente.doc || '', cliente.nombre || '',
     parsed.moneda || '', Number(parsed.total) || 0,
-    parsed.fecha || '', new Date().toISOString(),
+    parsed.fecha || '', new Date().toISOString(), pdfBytes,
   ]);
 }
 
@@ -194,6 +198,63 @@ function descargarBlob(blob, nombre) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// ── Visor de PDF (abrir, imprimir, descargar) ──
+
+let visorUrl = null;
+let visorNombre = 'comprobante.pdf';
+let visorBytes = null;
+function _setVisorBytes(b) { visorBytes = b; }
+
+function mostrarPdf(pdfBytes, titulo, nombreArchivo, autoImprimir = false) {
+  const frame = document.getElementById('visor-frame');
+  if (visorUrl) URL.revokeObjectURL(visorUrl);
+  visorUrl = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+  visorNombre = nombreArchivo;
+  document.getElementById('visor-titulo').textContent = titulo;
+  frame.onload = () => {
+    if (autoImprimir) {
+      try { frame.contentWindow.print(); } catch (_) {}
+    }
+  };
+  frame.src = visorUrl;
+  document.getElementById('visor').hidden = false;
+}
+
+function cerrarVisor() {
+  document.getElementById('visor').hidden = true;
+  const frame = document.getElementById('visor-frame');
+  frame.onload = null;
+  frame.src = 'about:blank';
+  if (visorUrl) { URL.revokeObjectURL(visorUrl); visorUrl = null; }
+}
+
+document.getElementById('visor-cerrar').addEventListener('click', cerrarVisor);
+document.getElementById('visor-imprimir').addEventListener('click', () => {
+  try { document.getElementById('visor-frame').contentWindow.print(); } catch (_) {}
+});
+document.getElementById('visor-descargar').addEventListener('click', () => {
+  if (visorBytes) descargarBlob(new Blob([visorBytes], { type: 'application/pdf' }), visorNombre);
+});
+
+// Abrir el PDF de un comprobante guardado (clic en fila del historial).
+function verPdfDeConversion(id) {
+  const res = db.exec('SELECT serie, numero, pdf_blob FROM conversiones WHERE id = ?', [id]);
+  if (!res.length || !res[0].values.length) return;
+  const [serie, numero, blob] = res[0].values[0];
+  if (!blob) {
+    alert('Este comprobante se registró antes de guardar el PDF. Vuelve a convertir su XML para poder verlo.');
+    return;
+  }
+  const bytes = new Uint8Array(blob);
+  _setVisorBytes(bytes);
+  mostrarPdf(bytes, `${serie}-${numero}`, `${serie}-${numero}.pdf`, false);
+}
+
+document.getElementById('tabla-historial').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) verPdfDeConversion(Number(tr.dataset.id));
+});
 
 // ── Convertir XML → PDF ──
 
@@ -214,12 +275,11 @@ document.getElementById('form-xml').addEventListener('submit', async (evento) =>
     let logoPngBytes = null;
     if (logoFile) {
       logoPngBytes = await imagenArchivoAPngBytes(logoFile);
-      if (ruc) await guardarLogoPorRuc(ruc, logoPngBytes);
+      if (ruc) guardarLogoPorRuc(ruc, logoPngBytes);
     } else if (ruc) {
       logoPngBytes = obtenerLogoPorRuc(ruc);
     }
 
-    // El PDF lo genera la API sin estado (motor Python probado).
     const formData = new FormData();
     formData.append('xml', xmlFile, xmlFile.name);
     if (logoPngBytes) {
@@ -231,32 +291,47 @@ document.getElementById('form-xml').addEventListener('submit', async (evento) =>
       try { const j = await respuesta.json(); if (j.detail) detalle = j.detail; } catch (_) {}
       throw new Error(detalle);
     }
-    const blob = await respuesta.blob();
-    descargarBlob(blob, `${parsed.serie}-${parsed.numero}.pdf`);
+    const pdfBytes = new Uint8Array(await respuesta.arrayBuffer());
 
-    await registrarConversion(parsed);
+    registrarConversion(parsed, pdfBytes);
     await persistir();
     refrescar(document.getElementById('buscar').value.trim());
 
     mensajeXml.textContent = `PDF generado: ${parsed.serie}-${parsed.numero}.pdf`;
     evento.target.reset();
     setTimeout(() => { mensajeXml.textContent = ''; }, 4000);
+
+    // Abre el PDF listo para imprimir.
+    _setVisorBytes(pdfBytes);
+    mostrarPdf(pdfBytes, `${parsed.serie}-${parsed.numero}`, `${parsed.serie}-${parsed.numero}.pdf`, true);
   } catch (err) {
     console.error(err);
     mensajeXml.textContent = `Error: ${err.message}`;
   }
 });
 
-// ── Búsqueda en el historial ──
+// ── Búsqueda ──
 document.getElementById('buscar').addEventListener('input', (e) => {
   listarHistorial(e.target.value.trim());
 });
 
+// ── Navegación entre vistas (por hash, para que el botón Atrás funcione) ──
+function router() {
+  const enLista = location.hash === '#comprobantes';
+  document.getElementById('vista-home').hidden = enLista;
+  document.getElementById('vista-lista').hidden = !enLista;
+  if (enLista) listarHistorial(document.getElementById('buscar').value.trim());
+}
+window.addEventListener('hashchange', router);
+document.getElementById('volver').addEventListener('click', (e) => {
+  e.preventDefault();
+  location.hash = '';
+});
+
 // ── Exportar / importar copia .sqlite ──
 document.getElementById('btn-exportar').addEventListener('click', () => {
-  const blob = new Blob([db.export()], { type: 'application/x-sqlite3' });
   const fecha = new Date().toISOString().slice(0, 10);
-  descargarBlob(blob, `comprobantes-${fecha}.sqlite`);
+  descargarBlob(new Blob([db.export()], { type: 'application/x-sqlite3' }), `comprobantes-${fecha}.sqlite`);
 });
 
 document.getElementById('btn-importar').addEventListener('click', () => {
@@ -270,7 +345,7 @@ document.getElementById('importar-archivo').addEventListener('change', async (e)
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const prueba = new SQL.Database(bytes);
-    prueba.exec('SELECT 1 FROM conversiones LIMIT 1'); // valida que sea una base compatible
+    prueba.exec('SELECT 1 FROM conversiones LIMIT 1');
     db = prueba;
     crearTablas();
     await persistir();
