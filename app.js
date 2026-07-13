@@ -54,7 +54,15 @@ function filasDe(sql, params = []) {
 }
 function numFmt(n, d = 2) { return Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
 function money(n) { return 'S/ ' + numFmt(n); }
-function badge(cod) { return `<span class="badge ${TIPO_BADGE[cod] || 'b-def'}">${TIPO_CORTO[cod] || cod || '—'}</span>`; }
+// Comprobantes convertidos antes de guardar tipo_cod no tienen código; se
+// infiere del texto completo que sí quedó guardado, para no dejarlos sin badge.
+const TIPO_TEXTO_A_COD = { 'FACTURA ELECTRÓNICA': '01', 'BOLETA DE VENTA ELECTRÓNICA': '03', 'NOTA DE CRÉDITO ELECTRÓNICA': '07', 'NOTA DE DÉBITO ELECTRÓNICA': '08' };
+function codDeTipo(cod, textoCompleto) { return cod || TIPO_TEXTO_A_COD[(textoCompleto || '').toUpperCase()] || ''; }
+function badge(cod, textoCompleto) {
+  const c = codDeTipo(cod, textoCompleto);
+  return `<span class="badge ${TIPO_BADGE[c] || 'b-def'}">${TIPO_CORTO[c] || textoCompleto || '—'}</span>`;
+}
+function fechaPe(f) { return (f && f.length === 10 && f[4] === '-') ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : (f || ''); }
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function toast(msg, tipo = '') {
@@ -75,15 +83,15 @@ function dashboard() {
   $('s-empresas').textContent = r.e;
   $('s-ultimo').textContent = r.u ? r.u.slice(0, 10) : '—';
   pintarTabla($('tabla-recientes'), $('recientes-vacio'),
-    filasDe('SELECT id, tipo_cod, serie, numero, cliente_nombre, total FROM conversiones ORDER BY id DESC LIMIT 5'),
-    (f) => `<td>${badge(f.tipo_cod)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.cliente_nombre)}</td><td class="r">${money(f.total)}</td><td class="td-ver">Ver ›</td>`);
+    filasDe('SELECT id, tipo, tipo_cod, serie, numero, cliente_nombre, total FROM conversiones ORDER BY id DESC LIMIT 5'),
+    (f) => `<td>${badge(f.tipo_cod, f.tipo)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.cliente_nombre)}</td><td class="r">${money(f.total)}</td><td class="td-ver">Ver ›</td>`);
 }
 
 // Comprobantes: agrupados por empresa emisora, con una fila de "quiebre" (separador)
 // entre cada RUC distinto, para que sea fácil ver a qué empresa pertenece cada uno.
 const COLS_HISTORIAL = 8;
 function listarHistorial(filtro = '') {
-  let sql = `SELECT id, tipo_cod, serie, numero, ruc_emisor, razon_social_emisor, cliente_doc, cliente_nombre, moneda, total, fecha_emision FROM conversiones`;
+  let sql = `SELECT id, tipo, tipo_cod, serie, numero, ruc_emisor, razon_social_emisor, cliente_doc, cliente_nombre, moneda, total, fecha_emision FROM conversiones`;
   const p = [];
   if (filtro) { sql += ' WHERE serie LIKE ? OR numero LIKE ? OR ruc_emisor LIKE ? OR cliente_nombre LIKE ? OR cliente_doc LIKE ?'; const l = `%${filtro}%`; p.push(l, l, l, l, l); }
   sql += ' ORDER BY ruc_emisor, id DESC';
@@ -108,7 +116,7 @@ function listarHistorial(filtro = '') {
     }
     const tr = document.createElement('tr');
     tr.dataset.id = f.id;
-    tr.innerHTML = `<td>${badge(f.tipo_cod)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.ruc_emisor)}</td><td>${esc(f.cliente_nombre)}</td><td>${esc(f.cliente_doc)}</td><td class="r">${esc(f.moneda)} ${numFmt(f.total)}</td><td>${esc(f.fecha_emision)}</td><td class="td-ver">Ver PDF ›</td>`;
+    tr.innerHTML = `<td>${badge(f.tipo_cod, f.tipo)}</td><td><strong>${esc(f.serie)}-${esc(f.numero)}</strong></td><td>${esc(f.ruc_emisor)}</td><td>${esc(f.cliente_doc)}</td><td class="td-cliente" title="${esc(f.cliente_nombre)}">${esc(f.cliente_nombre)}</td><td class="r">${esc(f.moneda)} ${numFmt(f.total)}</td><td>${fechaPe(f.fecha_emision)}</td><td class="td-ver">Ver PDF ›</td>`;
     tb.appendChild(tr);
   }
   tabla.hidden = false; vacio.hidden = true;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mini-pwa-poc-v9';
+const CACHE_NAME = 'mini-pwa-poc-v10';
 const ARCHIVOS = [
   './',
   './index.html',
