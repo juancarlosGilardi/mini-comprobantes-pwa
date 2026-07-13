@@ -3,98 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mini Comprobantes</title>
+<title>Comprobantes — Facturas & Boletas</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#004D98">
+<meta name="theme-color" content="#00337a">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>Mini Comprobantes</h1>
-  <p class="subtitulo">Convierte el XML de tu comprobante en PDF — tus datos quedan en tu disco, nunca en la nube.</p>
-</header>
 
-<main>
-  <!-- ═══════ VISTA INICIO ═══════ -->
-  <div id="vista-home">
-    <section class="dashboard">
-      <a class="stat stat-link" href="#comprobantes" title="Ver todos los comprobantes">
-        <div class="stat-num" id="stat-total">0</div>
-        <div class="stat-lbl">Comprobantes&nbsp;›</div>
-      </a>
-      <div class="stat">
-        <div class="stat-num" id="stat-monto">S/ 0.00</div>
-        <div class="stat-lbl">Monto total</div>
+<!-- ═══════ SPRITE DE ÍCONOS ═══════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h8v8H3v-8zm10 3h8v5h-8v-5z"/></symbol>
+  <symbol id="i-convert" viewBox="0 0 24 24"><path d="M12 3v10m0-10l-4 4m4-4l4 4M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M3 21h18M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M15 21V9h2a2 2 0 012 2v10M8 7h2M8 11h2M8 15h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-backup" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zm10 2l-4.35-4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6v-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM14 2v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3m0 0l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm0 12l4-4 4 4 4-4 4 4M9 9a1 1 0 100-2 1 1 0 000 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><path d="M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3zM4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-14v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="app">
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="icon-192.png" alt="" class="brand-logo">
+      <div class="brand-txt"><strong>Facturas &amp; Boletas</strong><span>Edición escritorio</span></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="#dashboard"><svg class="ic"><use href="#i-dash"/></svg>Dashboard</a>
+      <a class="nav-item" href="#convertir"><svg class="ic"><use href="#i-convert"/></svg>Convertir</a>
+      <a class="nav-item" href="#comprobantes"><svg class="ic"><use href="#i-list"/></svg>Comprobantes</a>
+      <a class="nav-item" href="#empresas"><svg class="ic"><use href="#i-building"/></svg>Empresas y logos</a>
+      <a class="nav-item" href="#respaldo"><svg class="ic"><use href="#i-backup"/></svg>Respaldo</a>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="dot"></span> Tus datos viven en este equipo, nunca en la nube.
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ═══════ CONTENIDO ═══════ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn only-mobile" id="btn-menu" aria-label="Menú"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <h1 id="titulo-vista">Dashboard</h1>
+      <a class="btn btn-primary topbar-cta" href="#convertir"><svg class="ic"><use href="#i-convert"/></svg>Convertir</a>
+    </header>
+
+    <div class="scroll">
+
+    <!-- ── DASHBOARD ── -->
+    <section class="view" id="v-dashboard">
+      <div class="stats">
+        <a class="stat" href="#comprobantes">
+          <div class="stat-ic ic-blue"><svg class="ic"><use href="#i-doc"/></svg></div>
+          <div><div class="stat-num" id="s-total">0</div><div class="stat-lbl">Comprobantes</div></div>
+        </a>
+        <div class="stat">
+          <div class="stat-ic ic-green"><svg class="ic"><use href="#i-coins"/></svg></div>
+          <div><div class="stat-num" id="s-monto">S/ 0.00</div><div class="stat-lbl">Monto total</div></div>
+        </div>
+        <a class="stat" href="#empresas">
+          <div class="stat-ic ic-grana"><svg class="ic"><use href="#i-building"/></svg></div>
+          <div><div class="stat-num" id="s-empresas">0</div><div class="stat-lbl">Empresas</div></div>
+        </a>
+        <div class="stat">
+          <div class="stat-ic ic-gold"><svg class="ic"><use href="#i-clock"/></svg></div>
+          <div><div class="stat-num" id="s-ultimo">—</div><div class="stat-lbl">Último convertido</div></div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="stat-num" id="stat-ultimo">—</div>
-        <div class="stat-lbl">Último convertido</div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Últimos comprobantes</h2>
+          <a class="link" href="#comprobantes">Ver todos ›</a>
+        </div>
+        <div class="tabla-wrap">
+          <table class="grid grid-click" id="tabla-recientes">
+            <thead><tr><th>Tipo</th><th>Serie-Número</th><th>Cliente</th><th class="r">Total</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="vacio" id="recientes-vacio">Aún no has convertido comprobantes. <a class="link" href="#convertir">Convierte el primero ›</a></p>
+        </div>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Convertir XML a PDF</h2>
-      <form id="form-xml">
-        <label>Archivo XML o ZIP del comprobante
-          <input type="file" id="xml-archivo" accept=".xml,.zip" required>
+    <!-- ── CONVERTIR ── -->
+    <section class="view" id="v-convertir" hidden>
+      <div class="card">
+        <h2>Convertir XML a PDF</h2>
+        <p class="sub">Sube un comprobante, varios, o una carpeta completa. Se genera el PDF de cada uno y quedan en tu historial.</p>
+
+        <div class="dropzone" id="dropzone">
+          <svg class="dz-ic"><use href="#i-upload"/></svg>
+          <p class="dz-title">Arrastra aquí tus XML o ZIP</p>
+          <p class="dz-sub">o</p>
+          <div class="dz-btns">
+            <button class="btn btn-primary" id="btn-files"><svg class="ic"><use href="#i-doc"/></svg>Seleccionar archivos</button>
+            <button class="btn btn-ghost" id="btn-folder"><svg class="ic"><use href="#i-building"/></svg>Seleccionar carpeta</button>
+          </div>
+          <input type="file" id="in-files" accept=".xml,.zip" multiple hidden>
+          <input type="file" id="in-folder" webkitdirectory multiple hidden>
+        </div>
+
+        <label class="logo-field">
+          <span><svg class="ic"><use href="#i-image"/></svg> Logo de la empresa <em>(opcional — se guarda y reemplaza por RUC)</em></span>
+          <input type="file" id="in-logo" accept="image/*">
         </label>
-        <label>Logo de la empresa (opcional, se recuerda por RUC)
-          <input type="file" id="logo-archivo" accept="image/*">
-        </label>
-        <button type="submit" class="btn-principal">Convertir a PDF</button>
-      </form>
-      <p id="mensaje-xml" role="status"></p>
+
+        <div class="proceso" id="proceso" hidden>
+          <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+          <div class="proceso-txt" id="proceso-txt"></div>
+          <ul class="proceso-log" id="proceso-log"></ul>
+          <button class="btn btn-primary" id="btn-zip" hidden><svg class="ic"><use href="#i-download"/></svg>Descargar todos (ZIP)</button>
+        </div>
+      </div>
     </section>
 
-    <section class="card datos">
-      <h2>Copia de seguridad</h2>
-      <p class="ayuda">Tus datos se guardan solos en este equipo. Si quieres un respaldo o pasarlos a otra computadora, exporta o importa el archivo <code>.sqlite</code>.</p>
-      <div class="botones">
-        <button id="btn-exportar" class="btn-sec">Exportar copia (.sqlite)</button>
-        <button id="btn-importar" class="btn-sec">Importar copia (.sqlite)</button>
-        <input type="file" id="importar-archivo" accept=".sqlite,.db" hidden>
+    <!-- ── COMPROBANTES ── -->
+    <section class="view" id="v-comprobantes" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h2>Comprobantes</h2>
+          <div class="search">
+            <svg class="ic"><use href="#i-search"/></svg>
+            <input type="search" id="buscar" placeholder="Buscar por serie, RUC o cliente…" autocomplete="off">
+          </div>
+        </div>
+        <div class="tabla-wrap">
+          <table class="grid grid-click" id="tabla-historial">
+            <thead><tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th class="r">Total</th><th>Emisión</th><th>Convertido</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="vacio" id="historial-vacio">Aún no has convertido ningún comprobante.</p>
+        </div>
       </div>
-      <p id="mensaje-datos" role="status"></p>
     </section>
-  </div>
 
-  <!-- ═══════ VISTA LISTA DE COMPROBANTES ═══════ -->
-  <div id="vista-lista" hidden>
-    <p><a href="#" class="volver" id="volver">‹ Volver al inicio</a></p>
-    <section class="card">
-      <div class="card-head">
-        <h2>Comprobantes</h2>
-        <input type="search" id="buscar" placeholder="Buscar…" autocomplete="off">
-      </div>
-      <p class="ayuda">Haz clic en un comprobante para ver e imprimir su PDF.</p>
-      <div class="tabla-wrap">
-        <table class="grid grid-click" id="tabla-historial">
-          <thead>
-            <tr><th>Tipo</th><th>Serie-Número</th><th>RUC emisor</th><th>Cliente</th><th>Total</th><th>Fecha emisión</th><th>Convertido</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <p id="historial-vacio" class="vacio">Aún no has convertido ningún comprobante.</p>
+    <!-- ── EMPRESAS Y LOGOS ── -->
+    <section class="view" id="v-empresas" hidden>
+      <div class="card">
+        <h2>Empresas y logos</h2>
+        <p class="sub">El logo se usa automáticamente al convertir un XML de ese RUC. Puedes cambiarlo o quitarlo cuando quieras.</p>
+        <div class="empresas" id="empresas"></div>
+        <p class="vacio" id="empresas-vacio">Todavía no hay empresas. Aparecerán cuando conviertas tu primer comprobante.</p>
+        <input type="file" id="in-logo-empresa" accept="image/*" hidden>
       </div>
     </section>
+
+    <!-- ── RESPALDO ── -->
+    <section class="view" id="v-respaldo" hidden>
+      <div class="card">
+        <h2>Copia de seguridad</h2>
+        <p class="sub">Tus comprobantes y sus PDF se guardan solos en este equipo. Exporta una copia para respaldar o mover todo a otra computadora.</p>
+        <div class="botones">
+          <button class="btn btn-primary" id="btn-exportar"><svg class="ic"><use href="#i-download"/></svg>Exportar copia (.sqlite)</button>
+          <button class="btn btn-ghost" id="btn-importar"><svg class="ic"><use href="#i-upload"/></svg>Importar copia (.sqlite)</button>
+          <input type="file" id="in-importar" accept=".sqlite,.db" hidden>
+        </div>
+      </div>
+    </section>
+
+    </div><!-- /scroll -->
   </div>
-</main>
+</div>
 
 <!-- ═══════ VISOR DE PDF ═══════ -->
-<div id="visor" hidden>
+<div class="visor" id="visor" hidden>
   <div class="visor-panel">
     <div class="visor-bar">
-      <span id="visor-titulo">Comprobante</span>
+      <span class="visor-titulo" id="visor-titulo">Comprobante</span>
       <div class="visor-acciones">
-        <button id="visor-imprimir" class="btn-principal">Imprimir</button>
-        <button id="visor-descargar" class="btn-sec">Descargar</button>
-        <button id="visor-cerrar" class="btn-sec">Cerrar</button>
+        <button class="btn btn-primary" id="visor-imprimir"><svg class="ic"><use href="#i-print"/></svg>Imprimir</button>
+        <button class="btn btn-ghost-light" id="visor-descargar"><svg class="ic"><use href="#i-download"/></svg>Descargar</button>
+        <button class="icon-btn light" id="visor-cerrar" aria-label="Cerrar"><svg class="ic"><use href="#i-close"/></svg></button>
       </div>
     </div>
     <iframe id="visor-frame" title="Vista del comprobante"></iframe>
   </div>
 </div>
+
+<div class="toasts" id="toasts"></div>
 
 <script src="sql-wasm.js"></script>
 <script src="fflate.min.js"></script>
