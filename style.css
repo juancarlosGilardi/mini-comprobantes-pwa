@@ -1,0 +1,97 @@
+:root {
+  --azul: #004D98;
+  --azul2: #0a2d63;
+  --grana: #A50044;
+  --oro: #EDBB00;
+  --bg: #eef1f5;
+  --tinta: #1f2937;
+  --gris: #64748b;
+  --line: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--tinta);
+  margin: 0;
+  padding: 0 1rem 3rem;
+}
+
+header {
+  background: var(--azul);
+  color: white;
+  padding: 1.5rem 1rem;
+  margin: 0 -1rem 1.5rem;
+}
+
+header h1 { margin: 0 0 0.25rem; }
+.subtitulo { margin: 0; color: var(--oro); font-size: 0.9rem; }
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: var(--azul2);
+}
+
+.botones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+button {
+  background: var(--azul);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+button:hover { background: var(--azul2); }
+
+button.btn-principal { background: var(--grana); }
+button.btn-principal:hover { background: #7a0033; }
+
+form { display: flex; flex-direction: column; gap: 0.75rem; }
+
+label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; color: var(--gris); }
+
+input, select {
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+table.grid th, table.grid td {
+  border: 1px solid var(--line);
+  padding: 0.5rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+table.grid th { background: var(--bg); }
+
+#mensaje-guardado { color: var(--azul); font-weight: 600; min-height: 1.2em; }
+#estado-archivo { color: var(--gris); }

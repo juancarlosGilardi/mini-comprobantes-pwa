@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Comprobantes</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#004D98">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Mini Comprobantes</h1>
+  <p class="subtitulo">PoC: PWA instalable + SQLite real en tu disco</p>
+</header>
+
+<main>
+  <section class="card" id="seccion-archivo">
+    <h2>1. Archivo de datos</h2>
+    <p id="estado-archivo">Sin archivo abierto.</p>
+    <div class="botones">
+      <button id="btn-abrir">Abrir archivo existente</button>
+      <button id="btn-crear">Crear archivo nuevo</button>
+    </div>
+  </section>
+
+  <section class="card" id="seccion-form" hidden>
+    <h2>2. Nuevo comprobante</h2>
+    <form id="form-comprobante">
+      <label>Tipo
+        <select id="tipo" required>
+          <option value="Factura">Factura</option>
+          <option value="Boleta">Boleta</option>
+          <option value="Nota de crédito">Nota de crédito</option>
+        </select>
+      </label>
+      <label>Monto (S/)
+        <input type="number" id="monto" step="0.01" min="0" required>
+      </label>
+      <label>Fecha
+        <input type="date" id="fecha" required>
+      </label>
+      <label>Descripción
+        <input type="text" id="descripcion" maxlength="200">
+      </label>
+      <button type="submit" class="btn-principal">Guardar comprobante</button>
+    </form>
+    <p id="mensaje-guardado" role="status"></p>
+  </section>
+
+  <section class="card" id="seccion-lista" hidden>
+    <h2>3. Comprobantes guardados</h2>
+    <button id="btn-listar">Ver comprobantes</button>
+    <table class="grid" id="tabla-comprobantes" hidden>
+      <thead>
+        <tr><th>ID</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Descripción</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="sql-wasm.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

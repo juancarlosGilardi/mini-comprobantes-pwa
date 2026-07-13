@@ -1,0 +1,12 @@
+{
+  "name": "Mini Comprobantes",
+  "short_name": "Comprobantes",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#eef1f5",
+  "theme_color": "#004D98",
+  "description": "PoC de PWA instalable con SQLite real en disco, sin backend ni exe.",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
